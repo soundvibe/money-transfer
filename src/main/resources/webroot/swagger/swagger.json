@@ -1,0 +1,340 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "Money transfer API",
+    "version": "1.0.0",
+    "title": "Money transfer API",
+    "contact": {
+      "email": "lnaginionis@gmail.com"
+    }
+  },
+  "tags": [
+    {
+      "name": "account",
+      "description": "actions using account"
+    },
+    {
+      "name": "transfer",
+      "description": "money transfers"
+    }
+  ],
+  "paths": {
+    "/account": {
+      "post": {
+        "tags": [
+          "account"
+        ],
+        "summary": "opens new account",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "account",
+            "description": "Account request",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Account"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Account opened successfully",
+            "schema": {
+              "$ref": "#/definitions/Account"
+            },
+            "examples": {
+              "application/json": {
+                "id": "1",
+                "firstName": "Linas",
+                "lastName": "Naginionis",
+                "balance": {
+                  "amount": 25.25,
+                  "currency": "EUR"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          }
+        }
+      }
+    },
+    "/account/{accountId}": {
+      "delete": {
+        "tags": [
+          "account"
+        ],
+        "summary": "closes account",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "accountId",
+            "description": "Account id",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account closed successfully",
+            "schema": {
+              "$ref": "#/definitions/Account"
+            },
+            "examples": {
+              "application/json": {
+                "id": "1",
+                "firstName": "Linas",
+                "lastName": "Naginionis",
+                "balance": {
+                  "amount": 25.25,
+                  "currency": "EUR"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "No account to close"
+          }
+        }
+      }
+    },
+    "/transfer": {
+      "post": {
+        "tags": [
+          "transfer"
+        ],
+        "summary": "initiates new money transfer between two accounts",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "transfer",
+            "description": "Money transfer request",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/TransferMoney"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Money transfer request accepted successfully",
+            "schema": {
+              "$ref": "#/definitions/TransferResponse"
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "502": {
+            "description": "Bad gateway"
+          }
+        }
+      }
+    },
+    "/transfer/{transferId}": {
+      "get": {
+        "tags": [
+          "transfer"
+        ],
+        "summary": "checks status of initiated money transfer",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "transferId",
+            "description": "Money transfer id",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Money transfer request completed successfully",
+            "schema": {
+              "$ref": "#/definitions/MoneyTransferred"
+            }
+          },
+          "204": {
+            "description": "No content"
+          },
+          "412": {
+            "description": "Precondition failed",
+            "schema": {
+              "$ref": "#/definitions/MoneyTransferFailed"
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Account": {
+      "type": "object",
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "balance"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "example": "1111-56987-9547",
+          "description": "Represents id of an account"
+        },
+        "firstName": {
+          "type": "string",
+          "example": "Linas",
+          "description": "Represents first name of account's owner"
+        },
+        "lastName": {
+          "type": "string",
+          "example": "Naginionis",
+          "description": "Represents last name of account's owner"
+        },
+        "balance": {
+          "type": "object",
+          "example": {
+            "amount": 25.25,
+            "currency": "EUR"
+          },
+          "description": "Represents current account balance"
+        }
+      }
+    },
+    "TransferMoney": {
+      "type": "object",
+      "required": [
+        "accountIdFrom",
+        "accountIdTo",
+        "amountToTransfer"
+      ],
+      "properties": {
+        "accountIdFrom": {
+          "type": "string",
+          "example": "id1",
+          "description": "Represents source account id"
+        },
+        "accountIdTo": {
+          "type": "string",
+          "example": "id2",
+          "description": "Represents destination account id"
+        },
+        "amountToTransfer": {
+          "type": "object",
+          "example": {
+            "amount": 25.25,
+            "currency": "EUR"
+          },
+          "description": "Represents amount to transfer"
+        }
+      }
+    },
+    "TransferResponse": {
+      "type": "object",
+      "required": [
+        "transferId"
+      ],
+      "properties": {
+        "transferId": {
+          "type": "string",
+          "example": "transferId",
+          "description": "Represents transferId which could be used to track it's status"
+        }
+      }
+    },
+    "MoneyTransferFailed": {
+      "type": "object",
+      "required": [
+        "transferId",
+        "cause"
+      ],
+      "properties": {
+        "transferId": {
+          "type": "string",
+          "example": "transferId",
+          "description": "Represents transferId which could be used to track it's status"
+        },
+        "cause": {
+          "type": "string",
+          "example": "Error description",
+          "description": "Represents cause of failed money transfer"
+        }
+      }
+    },
+    "MoneyTransferred": {
+      "type": "object",
+      "required": [
+        "transferId",
+        "amount",
+        "accountIdFrom",
+        "accountIdTo"
+      ],
+      "properties": {
+        "transferId": {
+          "type": "string",
+          "example": "transferId",
+          "description": "Represents transferId which could be used to track it's status"
+        },
+        "amount": {
+          "type": "object",
+          "example": {
+            "amount": 25.25,
+            "currency": "EUR"
+          },
+          "description": "Represents transferred amount"
+        },
+        "accountIdFrom": {
+          "type": "string",
+          "example": "accountIdFrom",
+          "description": "Represents account id from where money was transferred"
+        },
+        "accountIdTo": {
+          "type": "string",
+          "example": "accountIdTo",
+          "description": "Represents destiantion account id where money was transferred"
+        }
+      }
+    },
+    "Money": {
+      "type": "object",
+      "required": [
+        "amount",
+        "currency"
+      ],
+      "properties": {
+        "amount": {
+          "type": "number",
+          "example": "25.25",
+          "description": "Represents actual amount"
+        },
+        "currency": {
+          "type": "string",
+          "example": "EUR",
+          "description": "Represents currency"
+        }
+      }
+    }
+  }
+}
