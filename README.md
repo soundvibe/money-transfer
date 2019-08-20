@@ -1,5 +1,5 @@
-[![Build Status](https://travis-ci.org/soundvibe/money-transfer-api.png)](https://travis-ci.org/soundvibe/money-transfer-api)
-[![Coverage Status](https://codecov.io/github/soundvibe/money-transfer-api/coverage.svg?branch=master)](https://codecov.io/github/soundvibe/money-transfer-api?branch=master)
+[![Build Status](https://travis-ci.org/soundvibe/money-transfer.png)](https://travis-ci.org/soundvibe/money-transfer)
+[![Coverage Status](https://codecov.io/github/soundvibe/money-transfer/coverage.svg?branch=master)](https://codecov.io/github/soundvibe/money-transfer?branch=master)
 
 # money-transfer-api
 
