@@ -140,13 +140,7 @@ class ApplicationITest {
 
         @Test
         void should_not_find_random_transfer() throws IOException, InterruptedException {
-            var requestStatus = HttpRequest.newBuilder(URI.create(transferUri + "/randomTransferId"))
-                    .GET()
-                    .setHeader(JSON_CONTENT.name, JSON_CONTENT.value)
-                    .build();
-
-            var responseStatus = HTTP_CLIENT.send(requestStatus, ri -> discarding());
-            assertEquals(NO_CONTENT.code(), responseStatus.statusCode());
+            assertEquals(NO_CONTENT.code(), transferStatusCode("randomTransferId"));
         }
 
         @Test
@@ -156,13 +150,17 @@ class ApplicationITest {
 
             var transferMoney = transferMoney(accountFrom.id, accountTo.id, Money.of(10.11, "EUR"));
 
-            var requestStatus = HttpRequest.newBuilder(URI.create(transferUri + "/" + transferMoney.id))
+            assertEquals(PRECONDITION_FAILED.code(), transferStatusCode(transferMoney.id));
+        }
+
+        private int transferStatusCode(String transferId) throws IOException, InterruptedException {
+            var requestStatus = HttpRequest.newBuilder(URI.create(transferUri + "/" + transferId))
                     .GET()
                     .setHeader(JSON_CONTENT.name, JSON_CONTENT.value)
                     .build();
 
             var responseStatus = HTTP_CLIENT.send(requestStatus, ri -> discarding());
-            assertEquals(PRECONDITION_FAILED.code(), responseStatus.statusCode());
+            return responseStatus.statusCode();
         }
 
         private Account openAccount(String firstName, String lastName, Money initialBalance) throws IOException, InterruptedException {
