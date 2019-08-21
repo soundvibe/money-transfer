@@ -12,7 +12,7 @@ import org.junit.jupiter.api.*;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.*;
-import java.util.UUID;
+import java.util.*;
 
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static java.net.http.HttpRequest.BodyPublishers.ofString;
@@ -20,13 +20,13 @@ import static java.net.http.HttpResponse.BodySubscribers.*;
 import static java.net.http.HttpResponse.BodySubscribers.ofString;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static net.soundvibe.web.HttpHeader.JSON_CONTENT;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayNameGeneration(DisplayNameGenerator.ReplaceUnderscores.class)
 class ApplicationITest {
 
     private static HttpServer httpServer;
-    private static HttpClient HTTP_CLIENT = HttpClient.newBuilder()
+    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
             .followRedirects(HttpClient.Redirect.NORMAL)
             .build();
     private static final int PORT = 1234;
@@ -116,58 +116,100 @@ class ApplicationITest {
     @DisplayName("/transfer")
     class TransferTests {
 
-        private final URI accountPath = SERVICE_ROOT.resolve("/account");
-        private final URI path = SERVICE_ROOT.resolve("/transfer");
+        private final URI accountUri = SERVICE_ROOT.resolve("/account");
+        private final URI transferUri = SERVICE_ROOT.resolve("/transfer");
 
         @Test
         void should_initiate_new_money_transfer_and_get_ok_status() throws IOException, InterruptedException {
-            var accountFrom = new Account(UUID.randomUUID().toString(), "From", "Surname", Money.of(1000, "EUR"), null);
-            var accountTo = new Account(UUID.randomUUID().toString(), "To", "Surname", Money.of(100, "EUR"), null);
+            var accountFrom = openAccount("From", "Surname", Money.of(1000, "EUR"));
+            var accountTo = openAccount("To", "LastName", Money.of(100, "EUR"));
 
-            var requestFrom = HttpRequest.newBuilder(accountPath)
-                    .POST(ofString(Json.toString(accountFrom)))
-                    .setHeader(JSON_CONTENT.name, JSON_CONTENT.value)
-                    .build();
+            var transferMoney = transferMoney(accountFrom.id, accountTo.id, Money.of(10.11, "EUR"));
 
-            var responseFrom = HTTP_CLIENT.send(requestFrom,
-                    ri -> mapping(ofString(UTF_8), json -> Json.parse(json, Account.class)));
-            assertEquals(CREATED.code(), responseFrom.statusCode());
-
-            var requestTo = HttpRequest.newBuilder(accountPath)
-                    .POST(ofString(Json.toString(accountTo)))
-                    .setHeader(JSON_CONTENT.name, JSON_CONTENT.value)
-                    .build();
-
-            var responseTo = HTTP_CLIENT.send(requestTo,
-                    ri -> mapping(ofString(UTF_8), json -> Json.parse(json, Account.class)));
-            assertEquals(CREATED.code(), responseTo.statusCode());
-
-            var transferId = UUID.randomUUID().toString();
-            var transferMoney = new TransferMoney(transferId, accountFrom.id, accountTo.id, Money.of(10.11, "EUR"));
-            var requestTransfer = HttpRequest.newBuilder(path)
-                    .POST(ofString(Json.toString(transferMoney)))
-                    .setHeader(JSON_CONTENT.name, JSON_CONTENT.value)
-                    .build();
-
-            var responseTransfer = HTTP_CLIENT.send(requestTransfer,
-                    ri -> mapping(ofString(UTF_8), JsonObject::new));
-
-            assertEquals(ACCEPTED.code(), responseTransfer.statusCode());
-            assertEquals(transferId, responseTransfer.body().getString("transferId"));
-
-            Thread.sleep(3000); //wait for transfer to be processed
-
-            var requestStatus = HttpRequest.newBuilder(URI.create(path + "/" + transferId))
+            var requestStatus = HttpRequest.newBuilder(URI.create(transferUri + "/" + transferMoney.id))
                     .GET()
                     .setHeader(JSON_CONTENT.name, JSON_CONTENT.value)
                     .build();
 
-            var responseStatus = HTTP_CLIENT.send(requestStatus,
-                    ri -> mapping(ofString(UTF_8), json -> Json.parse(json, MoneyTransferred.class)));
+            var maybeResponse = pollForStatusCode(OK.code(), requestStatus);
+            assertTrue(maybeResponse.isPresent());
 
-            var expected = MoneyTransferred.from(transferMoney);
-            assertEquals(OK.code(), responseStatus.statusCode());
-            assertEquals(expected, responseStatus.body());
+            var expected = Optional.of(MoneyTransferred.from(transferMoney));
+            assertEquals(expected, maybeResponse.map(HttpResponse::body));
+        }
+
+        @Test
+        void should_not_find_random_transfer() throws IOException, InterruptedException {
+            var requestStatus = HttpRequest.newBuilder(URI.create(transferUri + "/randomTransferId"))
+                    .GET()
+                    .setHeader(JSON_CONTENT.name, JSON_CONTENT.value)
+                    .build();
+
+            var responseStatus = HTTP_CLIENT.send(requestStatus, ri -> discarding());
+            assertEquals(NO_CONTENT.code(), responseStatus.statusCode());
+        }
+
+        @Test
+        void should_transfer_fail_when_insufficient_funds() throws IOException, InterruptedException {
+            var accountFrom = openAccount("From", "Surname", Money.of(10, "EUR"));
+            var accountTo = openAccount("To", "LastName", Money.of(100, "EUR"));
+
+            var transferMoney = transferMoney(accountFrom.id, accountTo.id, Money.of(10.11, "EUR"));
+
+            var requestStatus = HttpRequest.newBuilder(URI.create(transferUri + "/" + transferMoney.id))
+                    .GET()
+                    .setHeader(JSON_CONTENT.name, JSON_CONTENT.value)
+                    .build();
+
+            var responseStatus = HTTP_CLIENT.send(requestStatus, ri -> discarding());
+            assertEquals(PRECONDITION_FAILED.code(), responseStatus.statusCode());
+        }
+
+        private Account openAccount(String firstName, String lastName, Money initialBalance) throws IOException, InterruptedException {
+            var account = new Account(UUID.randomUUID().toString(), firstName, lastName, initialBalance, null);
+            var requestFrom = HttpRequest.newBuilder(accountUri)
+                    .POST(ofString(Json.toString(account)))
+                    .setHeader(JSON_CONTENT.name, JSON_CONTENT.value)
+                    .build();
+            var response = HTTP_CLIENT.send(requestFrom,
+                    ri -> mapping(ofString(UTF_8), json -> Json.parse(json, Account.class)));
+            assertEquals(CREATED.code(), response.statusCode());
+            return response.body();
+        }
+
+        private TransferMoney transferMoney(String accountIdFrom, String accountIdTo, Money amount) throws IOException, InterruptedException {
+            var id = UUID.randomUUID().toString();
+            var transferMoney = new TransferMoney(id, accountIdFrom, accountIdTo, amount);
+            var requestTransfer = HttpRequest.newBuilder(transferUri)
+                    .POST(ofString(Json.toString(transferMoney)))
+                    .setHeader(JSON_CONTENT.name, JSON_CONTENT.value)
+                    .build();
+
+            var responseTransfer = HTTP_CLIENT.send(requestTransfer, ri -> mapping(ofString(UTF_8), JsonObject::new));
+
+            assertEquals(ACCEPTED.code(), responseTransfer.statusCode());
+            var transferId = responseTransfer.body().getString("transferId");
+            assertEquals(id, transferId);
+            return transferMoney;
+        }
+
+        private static final int TIMES = 5;
+
+        private Optional<HttpResponse<MoneyTransferred>> pollForStatusCode(int statusCode, HttpRequest httpRequest) throws InterruptedException {
+            for (int i = 0; i < TIMES; i++) {
+                try {
+                    var responseStatus = HTTP_CLIENT.send(httpRequest,
+                            ri -> mapping(ofString(UTF_8), json -> Json.parse(json, MoneyTransferred.class)));
+
+                    if (responseStatus.statusCode() == statusCode) {
+                        return Optional.of(responseStatus);
+                    }
+                } catch (Exception e) {
+                    // response was not expected, ignoring...
+                }
+                Thread.sleep(1000);
+            }
+            return Optional.empty();
         }
     }
 }
