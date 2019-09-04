@@ -24,11 +24,26 @@ public class AccountHandler {
                 .map(accountRepository::open)
                 .onFailure(e -> ctx.response()
                         .setStatusCode(BAD_REQUEST.code())
+                        .setStatusMessage(e.getMessage())
                         .end())
                 .forEach(account -> ctx.response()
                         .putHeader(JSON_CONTENT.name, JSON_CONTENT.value)
                         .setStatusCode(CREATED.code())
                         .end(Json.toString(account)));
+    }
+
+    public void get(RoutingContext ctx) {
+        Optional.ofNullable(ctx.request().getParam("accountId"))
+                .flatMap(accountRepository::findById)
+                .ifPresentOrElse(
+                        account -> ctx.response()
+                            .putHeader(JSON_CONTENT.name, JSON_CONTENT.value)
+                            .setStatusCode(OK.code())
+                            .end(Json.toString(account)),
+                        () -> ctx.response()
+                                .setStatusCode(NO_CONTENT.code())
+                                .end()
+                );
     }
 
     public void close(RoutingContext ctx) {

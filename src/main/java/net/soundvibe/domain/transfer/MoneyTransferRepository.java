@@ -4,6 +4,7 @@ import io.reactivex.disposables.Disposable;
 import net.soundvibe.bus.*;
 import net.soundvibe.domain.base.Event;
 import net.soundvibe.domain.transfer.event.*;
+import net.soundvibe.domain.transfer.event.error.MoneyTransferFailed;
 
 import java.util.Map;
 import java.util.*;

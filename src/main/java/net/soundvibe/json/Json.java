@@ -16,6 +16,7 @@ public final class Json {
     private static ObjectMapper createMapper() {
         var objectMapper = new ObjectMapper();
         objectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+        objectMapper.enable(DeserializationFeature.FAIL_ON_NULL_CREATOR_PROPERTIES);
         objectMapper.registerModules(new MoneyModule(), new JavaTimeModule(), new ParameterNamesModule());
         return objectMapper;
     }

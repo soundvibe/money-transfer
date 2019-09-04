@@ -1,6 +1,7 @@
 package net.soundvibe.domain.transfer.command;
 
 import net.soundvibe.domain.base.Command;
+import net.soundvibe.domain.transfer.dto.TransferMoneyDto;
 import org.javamoney.moneta.Money;
 
 import java.util.UUID;
@@ -13,10 +14,18 @@ public class TransferMoney implements Command {
     public final Money amountToTransfer;
 
     public TransferMoney(String id, String accountIdFrom, String accountIdTo, Money amountToTransfer) {
-        this.id = id == null ? UUID.randomUUID().toString() : id;
+        this.id = id;
         this.accountIdFrom = accountIdFrom;
         this.accountIdTo = accountIdTo;
         this.amountToTransfer = amountToTransfer;
+    }
+
+    public static TransferMoney from(TransferMoneyDto transferMoneyDto) {
+        return new TransferMoney(
+                UUID.randomUUID().toString(),
+                transferMoneyDto.accountIdFrom,
+                transferMoneyDto.accountIdTo,
+                transferMoneyDto.amountToTransfer);
     }
 
     @Override
