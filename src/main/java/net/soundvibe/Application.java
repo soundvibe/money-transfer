@@ -20,6 +20,8 @@ import java.util.concurrent.*;
 
 import static io.vertx.core.logging.LoggerFactory.LOGGER_DELEGATE_FACTORY_CLASS_NAME;
 import static io.vertx.micrometer.MicrometerMetricsOptions.DEFAULT_REGISTRY_NAME;
+import static net.soundvibe.web.AccountHandler.*;
+import static net.soundvibe.web.HttpHeader.JSON_CONTENT;
 
 public class Application {
 
@@ -53,14 +55,15 @@ public class Application {
         router.get("/").handler(SwaggerHandler.create());
 
         var accountHandler = new AccountHandler(accountRepository);
-        router.post("/account")
-                .consumes("application/json")
-                .handler(accountHandler::open);
+        router.get("/account/:accountId").handler(accountHandler::get);
         router.delete("/account/:accountId").handler(accountHandler::close);
+        router.post("/account")
+                .consumes(JSON_CONTENT.value)
+                .handler(accountHandler::open);
 
         var transferHandler = new TransferHandler(eventBus, moneyTransferRepository);
         router.post("/transfer")
-                .consumes("application/json")
+                .consumes(JSON_CONTENT.value)
                 .handler(transferHandler::transfer);
         router.get("/transfer/:transferId").handler(transferHandler::transferStatus);
 

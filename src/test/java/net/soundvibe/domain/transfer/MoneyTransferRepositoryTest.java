@@ -5,6 +5,7 @@ import net.soundvibe.bus.*;
 import net.soundvibe.domain.account.Account;
 import net.soundvibe.domain.account.event.AccountDebited;
 import net.soundvibe.domain.transfer.event.*;
+import net.soundvibe.domain.transfer.event.error.*;
 import org.javamoney.moneta.Money;
 import org.junit.jupiter.api.*;
 
@@ -33,15 +34,15 @@ class MoneyTransferRepositoryTest {
 
     @Test
     void should_update_store_when_events_are_published() {
-        var moneyTransferFailed1 = new MoneyTransferFailed("1", "cause1");
-        var moneyTransferFailed2 = new MoneyTransferFailed("2", "cause2");
+        var moneyTransferFailed1 = new SameAccount("1", "2");
+        var moneyTransferFailed2 = new NegativeOrZeroAmount("2");
         var moneyTransferred = new MoneyTransferred("3", Money.of(100, "EUR"), "account1", "account2");
         eventBus.publish(moneyTransferFailed1);
         eventBus.publish(moneyTransferFailed2);
         eventBus.publish(moneyTransferred);
         eventBus.publish(moneyTransferred);
         eventBus.publish(new AccountDebited(Money.of(10, "EUR"),
-                new Account("id", "foo", "bar", Money.of(0, "EUR"), null)));
+                new Account("id", "foo", "bar", Money.of(0, "EUR"))));
 
         assertEquals(Optional.of(moneyTransferFailed1), sut.findById(moneyTransferFailed1.transferId));
         assertEquals(Optional.of(moneyTransferFailed2), sut.findById(moneyTransferFailed2.transferId));

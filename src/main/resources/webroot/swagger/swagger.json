@@ -67,6 +67,46 @@
       }
     },
     "/account/{accountId}": {
+      "get": {
+        "tags": [
+          "account"
+        ],
+        "summary": "gets an account",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "accountId",
+            "description": "Account id",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account retrieved successfully",
+            "schema": {
+              "$ref": "#/definitions/Account"
+            },
+            "examples": {
+              "application/json": {
+                "id": "1",
+                "firstName": "Linas",
+                "lastName": "Naginionis",
+                "balance": {
+                  "amount": 25.25,
+                  "currency": "EUR"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "Account does not exist"
+          }
+        }
+      },
       "delete": {
         "tags": [
           "account"

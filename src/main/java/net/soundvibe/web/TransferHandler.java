@@ -6,7 +6,9 @@ import io.vertx.ext.web.RoutingContext;
 import net.soundvibe.bus.EventBus;
 import net.soundvibe.domain.transfer.MoneyTransferRepository;
 import net.soundvibe.domain.transfer.command.TransferMoney;
+import net.soundvibe.domain.transfer.dto.TransferMoneyDto;
 import net.soundvibe.domain.transfer.event.*;
+import net.soundvibe.domain.transfer.event.error.MoneyTransferFailed;
 import net.soundvibe.json.Json;
 import org.slf4j.*;
 
@@ -30,8 +32,9 @@ public class TransferHandler {
     }
 
     public void transfer(RoutingContext ctx) {
-        Try.of(() -> Json.parse(ctx.getBodyAsString(), TransferMoney.class))
+        Try.of(() -> Json.parse(ctx.getBodyAsString(), TransferMoneyDto.class))
                 .onFailure(e -> handleError(ctx, e, BAD_REQUEST.code()))
+                .map(TransferMoney::from)
                 .andThen(eventBus::publish)
                 .onFailure(e -> handleError(ctx, e, BAD_GATEWAY.code()))
                 .forEach(transferMoney -> ctx.response()
@@ -71,6 +74,7 @@ public class TransferHandler {
         if (!ctx.response().ended()) {
             ctx.response()
                     .setStatusCode(statusCode)
+                    .setStatusMessage(e.getMessage())
                     .end();
         }
     }

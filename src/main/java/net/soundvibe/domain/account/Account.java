@@ -9,26 +9,20 @@ public class Account {
     public final String firstName;
     public final String lastName;
     public final Money balance;
-    public final String transactionId;
 
-    public Account(String id, String firstName, String lastName, Money balance, @Nullable String transactionId) {
+    public Account(String id, String firstName, String lastName, Money balance) {
         this.id = id;
         this.firstName = firstName;
         this.lastName = lastName;
         this.balance = balance;
-        this.transactionId = transactionId;
     }
 
-    public Account debit(Money debitAmount, String transactionId) {
-        return transactionId.equals(this.transactionId) ?
-                this :
-                new Account(id, firstName, lastName, balance.add(debitAmount), transactionId);
+    public Account deposit(Money amount) {
+        return new Account(id, firstName, lastName, balance.add(amount));
     }
 
-    public Account credit(Money creditAmount, String transactionId) {
-        return transactionId.equals(this.transactionId) ?
-                this :
-                new Account(id, firstName, lastName, balance.subtract(creditAmount), transactionId);
+    public Account withdraw(Money amount) {
+        return new Account(id, firstName, lastName, balance.subtract(amount));
     }
 
     @Override
@@ -51,7 +45,6 @@ public class Account {
                 ", firstName='" + firstName + '\'' +
                 ", lastName='" + lastName + '\'' +
                 ", balance=" + balance +
-                ", transactionId='" + transactionId + '\'' +
                 '}';
     }
 }
